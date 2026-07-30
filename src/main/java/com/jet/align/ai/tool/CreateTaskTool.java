@@ -19,7 +19,8 @@ import java.util.Map;
 public class CreateTaskTool implements Tool<TaskResponse> {
 
     private static final Logger log = LoggerFactory.getLogger(CreateTaskTool.class);
-
+    private final TaskService taskService;
+    private final ObjectMapper objectMapper;
 
     private static final String PARAMETERS_SCHEMA = """
             {
@@ -93,11 +94,6 @@ public class CreateTaskTool implements Tool<TaskResponse> {
         );
 
     }
-
-    private final TaskService taskService;
-    private final ObjectMapper objectMapper;
-
-
 
 
 
