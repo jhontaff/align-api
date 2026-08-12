@@ -8,8 +8,6 @@ import com.jet.align.task.TaskService;
 import com.jet.align.task.dto.TaskRequest;
 import com.jet.align.task.dto.TaskResponse;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -18,7 +16,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CreateTaskTool implements Tool<TaskResponse> {
 
-    private static final Logger log = LoggerFactory.getLogger(CreateTaskTool.class);
     private final TaskService taskService;
     private final ObjectMapper objectMapper;
 
@@ -73,7 +70,7 @@ public class CreateTaskTool implements Tool<TaskResponse> {
         try {
             return objectMapper.readValue(
                     PARAMETERS_SCHEMA,
-                    new TypeReference<Map<String, Object>>() {}
+                    new TypeReference<>() {}
             );
         } catch (JsonProcessingException e) {
             throw new IllegalStateException(
