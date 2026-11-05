@@ -251,7 +251,7 @@ A tool's raw arguments (`ToolContext.arguments()`) are a `Map<String, Object>` d
 
 # Current status (2026-11-05)
 
-**Production:** live since 2026-09-07 on a Hostinger VPS. The Spring Boot jar runs under `systemd` on :8080. The Angular `align-web` container sits behind Nginx Proxy Manager with TLS, alongside Postgres. CI runs on every push/PR (`mvnw verify`, Testcontainers). Deploys go from `main`, gated by a required reviewer on the `production` environment, with a pre-deploy backup and automatic rollback. Last deploy: 2026-10-28 (PR #40). The repository is public at `jhontaff/align-api`, with GitHub secret scanning and push protection enabled. See `devops.md` and [0010](docs/decisions/0010-production-deployment.md). Align has multiple independent users; every feature must isolate data per user ([0027](docs/decisions/0027-production-multi-user-baseline.md)).
+**Production:** live since 2026-09-07 on a Hostinger VPS. The Spring Boot jar runs under `systemd` on :8080. The Angular `align-web` container sits behind Nginx Proxy Manager with TLS, alongside Postgres. CI runs on every push/PR (`mvnw verify`, Testcontainers). Deploys go from `main`, gated by a required reviewer on the `production` environment, with a pre-deploy backup and automatic rollback. Last deploy: 2026-11-05 (docs only). The repository is public at `jhontaff/align-api`, with GitHub secret scanning and push protection enabled. A ruleset on `main` requires a PR and the `build-test` check, and blocks force-pushes and deletion; it requires 0 approvals. See `devops.md` and [0010](docs/decisions/0010-production-deployment.md). Align has multiple independent users; every feature must isolate data per user ([0027](docs/decisions/0027-production-multi-user-baseline.md)).
 
 **Schema:** Flyway `V1`–`V20` (latest: `V20__add_password_reset_tokens`).
 
@@ -289,12 +289,11 @@ Ordered by risk. Each one has context in the linked record.
 
 1. **Backups are on the same disk only.** There's no off-site copy, `/etc/align/align.env` isn't backed up anywhere, and a restore has never been tested. The backup script/service/timer aren't in `deploy/` either: they exist only on the VPS. ([0017](docs/decisions/0017-backups.md))
 2. **Decisions justified by "single-user" need re-review** now that Align has multiple independent users ([0027](docs/decisions/0027-production-multi-user-baseline.md)). The most pressing are backups holding other users' data ([0017](docs/decisions/0017-backups.md)) and the shared Gemini key pool, which sends every user's data to the same provider accounts. Then: the prompt-only scope guardrail ([0015](docs/decisions/0015-response-scope-guardrail.md)), no refresh token ([0006](docs/decisions/0006-auth-jwt.md)), aggregation in Java ([0012](docs/decisions/0012-finance-domain.md)), per-minute polling ([0020](docs/decisions/0020-timed-reminders.md)), push re-sync ([0009](docs/decisions/0009-proactive-push-notifications.md)), no reset-token cleanup ([0022](docs/decisions/0022-password-reset.md)) and the guiding constraint's rationale ([0002](docs/decisions/0002-personal-assistant-roadmap.md)). Each one either still holds (add a `Later notes` bullet saying so) or gets a superseding record.
-3. **Nothing enforces PRs on `main`.** The `main` ruleset is disabled and targets no branch, so direct pushes and force-pushes are still allowed. The `production` reviewer gates deploys, not pushes.
-4. **`TransactionServiceImpl` has six read methods with a bare `@Transactional`** that overrides the class-level `readOnly`. Harmless today, but it's the pattern that keeps getting copied. ([0012](docs/decisions/0012-finance-domain.md))
-5. **Test gaps:** `CreateTaskTool`, `DeleteTaskTool`, `AuthServiceImpl.register`/`login`, and the controller test for `/summary/by-category`.
-6. **Undocumented-at-the-time decisions need confirmation:** the rationale for moving the email to Thymeleaf ([0024](docs/decisions/0024-reset-email-thymeleaf-template.md)), and whether `/monthly-chart` should zero-fill days ([0026](docs/decisions/0026-finance-monthly-chart.md)).
-7. Unverifiable from this repo (frontend/ops): the `/reset-password` route in `align-web`, and whether the 21 old pooled Gemini keys were revoked.
-8. Nit: `AgentController` maps `"api/agent"` without the leading slash, unlike every other controller.
+3. **`TransactionServiceImpl` has six read methods with a bare `@Transactional`** that overrides the class-level `readOnly`. Harmless today, but it's the pattern that keeps getting copied. ([0012](docs/decisions/0012-finance-domain.md))
+4. **Test gaps:** `CreateTaskTool`, `DeleteTaskTool`, `AuthServiceImpl.register`/`login`, and the controller test for `/summary/by-category`.
+5. **Undocumented-at-the-time decisions need confirmation:** the rationale for moving the email to Thymeleaf ([0024](docs/decisions/0024-reset-email-thymeleaf-template.md)), and whether `/monthly-chart` should zero-fill days ([0026](docs/decisions/0026-finance-monthly-chart.md)).
+6. Unverifiable from this repo (frontend/ops): the `/reset-password` route in `align-web`, and whether the 21 old pooled Gemini keys were revoked.
+7. Nit: `AgentController` maps `"api/agent"` without the leading slash, unlike every other controller.
 
 ---
 
