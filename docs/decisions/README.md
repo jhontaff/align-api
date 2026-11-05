@@ -45,3 +45,4 @@ One file per architectural or product decision, numbered in rough chronological 
 | [0024](0024-reset-email-thymeleaf-template.md) | Reset email rendered with Thymeleaf | Accepted — rationale pending |
 | [0025](0025-uncomplete-habit.md) | Undo today's habit completion | Accepted |
 | [0026](0026-finance-monthly-chart.md) | Daily current-vs-previous-month chart | Accepted — open points |
+| [0027](0027-production-multi-user-baseline.md) | Production, multi-user baseline (YAGNI dropped) | Accepted |

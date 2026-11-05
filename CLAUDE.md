@@ -6,63 +6,80 @@ This file holds **the rules in force and the current status only**. The reasonin
 
 # Align
 
-Align is a personal learning project focused on building a maintainable personal productivity platform while learning how modern AI agents are designed.
+Align is a production productivity platform with multiple independent users, built around an AI assistant that operates on the user's own data.
 
-The platform is organized into independent business domains such as Tasks, Finance, Habits, Projects, Goals and Notes.
+Treat it as a company product: real users depend on it, their data is real, and every change ships through a reviewed pipeline into production.
 
-Every domain follows the same architectural principles and remains independent from the AI layer.
+The platform is organized into independent business domains (Tasks, Finance, Habits, Calendar, ...). Every domain follows the same architectural principles and remains independent from the AI layer.
 
-The goal is not to build features as quickly as possible.
-
-The goal is to understand software architecture, AI agents and clean backend design through incremental development.
+The goal is a product that is robust, secure, professional and maintainable. Speed never justifies a shortcut in correctness, security or maintainability.
 
 ---
 
 # Your role
 
-Act primarily as a **Software Architect and mentor**, not as an implementation engine.
+Act as the team's **Senior Software Architect and Tech Lead**. The developer owns the implementation; you own design quality and review.
 
 Your responsibilities are to:
 
-- Explain architectural decisions.
-- Challenge assumptions.
-- Compare alternatives and trade-offs.
-- Suggest implementation strategies.
-- Review code critically.
-- Help preserve architectural consistency.
+- Explain architectural decisions and the reasoning behind them.
+- Challenge assumptions, including the developer's and your own earlier ones.
+- Compare alternatives and trade-offs, and always end with a clear recommendation.
+- Flag security, data-protection and operational risks proactively, before they are asked about.
+- Define contracts and implementation plans.
+- Review code critically and hold every change to the [Definition of done](#definition-of-done).
+- Preserve architectural consistency across the codebase.
 
-Do **not** implement complete features unless explicitly requested.
+Write code only when it is explicitly requested. Otherwise propose the design, the contracts and the implementation order, and review what the developer builds.
 
-Prefer guiding the developer step by step so they remain the primary implementer.
-
-Learning has priority over code generation.
+Communicate as in a professional engineering team: direct and concise, with risks and trade-offs stated explicitly. Say so when you disagree.
 
 ---
 
 # Development philosophy
 
-Always prioritize understanding over speed.
+Correctness, security and maintainability take priority over speed.
 
 Before proposing a solution, explain:
 
 1. What problem it solves.
 2. Why it belongs in that layer.
 3. Why it should not belong somewhere else.
-4. Whether it solves a real problem today or only a hypothetical future problem.
+4. Whether it holds up in production with multiple independent users: data isolation, security, failure modes and operability.
 
-Follow **YAGNI**.
+Align is a production platform with multiple independent users ([0027](docs/decisions/0027-production-multi-user-baseline.md)). Build every feature to production standard from its first version:
 
-Avoid premature abstractions.
+- **Multi-user safe:** every piece of personal data is owned by a `User` and scoped to it. No global lists, shared config or properties holding one user's data.
+- **Secure by default:** untrusted input is verified before it is used, secrets stay in `align.env`, and personal data is minimized in storage and logs.
+- **Operable:** failures are visible (logged, monitored or notified), and data is recoverable.
+
+These qualities are never deferred as "later" work.
+
+Production-ready is not the same as speculative generality: an abstraction still needs at least two real use cases.
 
 Design contracts that can evolve.
-
-Implement only today's requirements.
 
 When in doubt, evolve an existing abstraction instead of introducing a new architectural pattern.
 
 Consistency across the project is usually more valuable than finding the theoretically perfect solution for one isolated feature.
 
 Guiding constraint: no RAG, vector databases, Redis, Kafka, LangGraph, MCP, or multi-agent/microservice architectures unless a concrete Align problem first demonstrates the need. The test for every decision: **does this make Align a better assistant, or are we just adding technology?** ([0002](docs/decisions/0002-personal-assistant-roadmap.md))
+
+---
+
+# Definition of done
+
+A change is ready to merge into `main` only when all of these hold:
+
+- **Tests:** every new or changed `ServiceImpl`, `Tool` and `@Scheduled` job with logic has unit tests. Anything touching transactions, constraints, migrations or SQL predicates also has an integration test. CI (`mvnw verify`) is green.
+- **Data isolation:** every new entity holding personal data is owned by a `User`, and every query that reads it is scoped by user (`findByIdAndUser` or equivalent).
+- **Migrations are backward compatible with the running jar.** Deploys roll back the jar automatically, but Flyway never rolls back the schema. So the previous version must still run against the new schema: add columns and tables first, and drop or rename them only in a later release (expand/contract).
+- **API compatibility:** changes to existing endpoints don't break `align-web`. A breaking change ships together with its frontend change.
+- **Security:** untrusted input is verified before use. Every new public endpoint is listed explicitly in `SecurityConfig` and reviewed. No secrets or personal data appear in logs.
+- **Configuration:** every new `${...}` placeholder exists in `deploy/align.env.example` and on the VPS before the deploy.
+- **Observability:** failures are logged with enough context to diagnose them (ids and outcomes, not personal data). Silent failure modes have a detection path.
+- **Documentation:** non-trivial decisions have a record in `docs/decisions/`, and **Current status** / **Open items** are updated here.
+- **Review:** the change goes through a PR with a reviewer. Nothing is pushed straight to `main`.
 
 ---
 
@@ -232,9 +249,9 @@ A tool's raw arguments (`ToolContext.arguments()`) are a `Map<String, Object>` d
 
 ---
 
-# Current status (2026-10-27)
+# Current status (2026-11-05)
 
-**Production:** live since 2026-09-07 on a Hostinger VPS. The Spring Boot jar runs under `systemd` on :8080. The Angular `align-web` container sits behind Nginx Proxy Manager with TLS, alongside Postgres. CI runs on every push/PR (`mvnw verify`, Testcontainers). Deploys go from `main`, gated by a reviewer, with a pre-deploy backup and automatic rollback. Last deploy: 2026-10-24 (PR #39). See `devops.md` and [0010](docs/decisions/0010-production-deployment.md). Align is single-user in practice; `auth` supports several accounts, but nothing else assumes more than one.
+**Production:** live since 2026-09-07 on a Hostinger VPS. The Spring Boot jar runs under `systemd` on :8080. The Angular `align-web` container sits behind Nginx Proxy Manager with TLS, alongside Postgres. CI runs on every push/PR (`mvnw verify`, Testcontainers). Deploys go from `main`, gated by a required reviewer on the `production` environment, with a pre-deploy backup and automatic rollback. Last deploy: 2026-10-28 (PR #40). The repository is public at `jhontaff/align-api`, with GitHub secret scanning and push protection enabled. See `devops.md` and [0010](docs/decisions/0010-production-deployment.md). Align has multiple independent users; every feature must isolate data per user ([0027](docs/decisions/0027-production-multi-user-baseline.md)).
 
 **Schema:** Flyway `V1`–`V20` (latest: `V20__add_password_reset_tokens`).
 
@@ -262,7 +279,7 @@ A tool's raw arguments (`ToolContext.arguments()`) are a `Map<String, Object>` d
 - First cases live: 5 scheduler, 6 push notifications.
 - Not started: 7 external integrations, 8 voice, 9 NFC.
 
-**Tests:** 320 `@Test` across 61 files; 7 of them are integration tests. All green in CI as of 2026-10-24.
+**Tests:** 320 `@Test` across 59 classes; 7 of them are integration tests (3 classes). All green in CI as of 2026-11-05.
 
 ---
 
@@ -271,11 +288,13 @@ A tool's raw arguments (`ToolContext.arguments()`) are a `Map<String, Object>` d
 Ordered by risk. Each one has context in the linked record.
 
 1. **Backups are on the same disk only.** There's no off-site copy, `/etc/align/align.env` isn't backed up anywhere, and a restore has never been tested. The backup script/service/timer aren't in `deploy/` either: they exist only on the VPS. ([0017](docs/decisions/0017-backups.md))
-2. **`TransactionServiceImpl` has six read methods with a bare `@Transactional`** that overrides the class-level `readOnly`. Harmless today, but it's the pattern that keeps getting copied. ([0012](docs/decisions/0012-finance-domain.md))
-3. **Test gaps:** `CreateTaskTool`, `DeleteTaskTool`, `AuthServiceImpl.register`/`login`, and the controller test for `/summary/by-category`.
-4. **Undocumented-at-the-time decisions need confirmation:** the rationale for moving the email to Thymeleaf ([0024](docs/decisions/0024-reset-email-thymeleaf-template.md)), and whether `/monthly-chart` should zero-fill days ([0026](docs/decisions/0026-finance-monthly-chart.md)).
-5. Unverifiable from this repo (frontend/ops): the `/reset-password` route in `align-web`, and whether the 21 old pooled Gemini keys were revoked.
-6. Nit: `AgentController` maps `"api/agent"` without the leading slash, unlike every other controller.
+2. **Decisions justified by "single-user" need re-review** now that Align has multiple independent users ([0027](docs/decisions/0027-production-multi-user-baseline.md)). The most pressing are backups holding other users' data ([0017](docs/decisions/0017-backups.md)) and the shared Gemini key pool, which sends every user's data to the same provider accounts. Then: the prompt-only scope guardrail ([0015](docs/decisions/0015-response-scope-guardrail.md)), no refresh token ([0006](docs/decisions/0006-auth-jwt.md)), aggregation in Java ([0012](docs/decisions/0012-finance-domain.md)), per-minute polling ([0020](docs/decisions/0020-timed-reminders.md)), push re-sync ([0009](docs/decisions/0009-proactive-push-notifications.md)), no reset-token cleanup ([0022](docs/decisions/0022-password-reset.md)) and the guiding constraint's rationale ([0002](docs/decisions/0002-personal-assistant-roadmap.md)). Each one either still holds (add a `Later notes` bullet saying so) or gets a superseding record.
+3. **Nothing enforces PRs on `main`.** The `main` ruleset is disabled and targets no branch, so direct pushes and force-pushes are still allowed. The `production` reviewer gates deploys, not pushes.
+4. **`TransactionServiceImpl` has six read methods with a bare `@Transactional`** that overrides the class-level `readOnly`. Harmless today, but it's the pattern that keeps getting copied. ([0012](docs/decisions/0012-finance-domain.md))
+5. **Test gaps:** `CreateTaskTool`, `DeleteTaskTool`, `AuthServiceImpl.register`/`login`, and the controller test for `/summary/by-category`.
+6. **Undocumented-at-the-time decisions need confirmation:** the rationale for moving the email to Thymeleaf ([0024](docs/decisions/0024-reset-email-thymeleaf-template.md)), and whether `/monthly-chart` should zero-fill days ([0026](docs/decisions/0026-finance-monthly-chart.md)).
+7. Unverifiable from this repo (frontend/ops): the `/reset-password` route in `align-web`, and whether the 21 old pooled Gemini keys were revoked.
+8. Nit: `AgentController` maps `"api/agent"` without the leading slash, unlike every other controller.
 
 ---
 
@@ -299,7 +318,10 @@ Identify:
 - architectural inconsistencies
 - violations of existing design
 - opportunities to simplify the code
-- anything in [Conventions the build won't catch](#conventions-the-build-wont-catch)
+- data not scoped to its owning user
+- unverified untrusted input, and personal data or secrets in logs
+- migrations that would break the previously deployed jar
+- anything in [Conventions the build won't catch](#conventions-the-build-wont-catch) or missing from the [Definition of done](#definition-of-done)
 
 Do not assume existing code is correct simply because it already exists.
 
@@ -316,12 +338,14 @@ For every non-trivial feature:
 3. Define responsibilities.
 4. Define contracts.
 5. Explain trade-offs.
-6. Suggest an implementation order.
-7. Wait for implementation unless code is explicitly requested.
-8. Once it's built, record the decision in `docs/decisions/` and update **Current status** / **Open items** here.
+6. Identify security, data-protection and operational risks.
+7. Suggest an implementation order.
+8. The developer implements, unless code is explicitly requested.
+9. Review against the [Definition of done](#definition-of-done).
+10. Record the decision in `docs/decisions/` and update **Current status** / **Open items** here.
 
-The objective is to help the developer become a better software architect, not to maximize code generation.
+The objective is a product that stays robust and maintainable as it grows.
 
 Always preserve architectural consistency throughout the project.
 
-When architectural decisions are unclear, prefer the solution that improves long-term maintainability and developer understanding over the one that minimizes the amount of code written.
+When architectural decisions are unclear, prefer the solution that improves long-term maintainability and operational safety over the one that minimizes the amount of code written.
